@@ -1,0 +1,18 @@
+[Unit]
+Description=Chechen Power Notify Telegram Bot
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=chechen-power
+Group=chechen-power
+WorkingDirectory=/opt/chechen-power-notify
+EnvironmentFile=/opt/chechen-power-notify/.env
+ExecStart=/opt/chechen-power-notify/.venv/bin/python -m app.main
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
