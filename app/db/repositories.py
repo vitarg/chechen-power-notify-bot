@@ -149,7 +149,7 @@ async def upsert_outage_event(session: AsyncSession, event: ParsedEvent) -> tupl
             )
         )
 
-    existing_by_hash = {segment.segment_hash: segment for segment in outage.segments}
+    existing_by_hash = {} if created else {segment.segment_hash: segment for segment in outage.segments}
     new_or_changed_segments = []
     for parsed_segment in event.segments:
         segment = existing_by_hash.get(parsed_segment.segment_hash)
