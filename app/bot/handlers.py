@@ -51,7 +51,7 @@ async def add_address(message: Message, state: FSMContext) -> None:
     await message.answer("Как назвать адрес? Например: Дом, Работа, Родители.")
 
 
-@user_router.message(AddAddress.waiting_for_title)
+@user_router.message(AddAddress.waiting_for_title, F.text, ~F.text.startswith("/"))
 async def address_title(message: Message, state: FSMContext) -> None:
     title = (message.text or "").strip()
     if not title:
@@ -62,7 +62,7 @@ async def address_title(message: Message, state: FSMContext) -> None:
     await message.answer("Теперь отправьте адрес свободным текстом. Например: Грозный, ул. Мира")
 
 
-@user_router.message(AddAddress.waiting_for_address)
+@user_router.message(AddAddress.waiting_for_address, F.text, ~F.text.startswith("/"))
 async def address_text(message: Message, state: FSMContext) -> None:
     raw_text = (message.text or "").strip()
     if not raw_text:
@@ -264,7 +264,7 @@ async def broadcast_start(message: Message, state: FSMContext, container: AppCon
     await message.answer("Отправьте текст рассылки.")
 
 
-@admin_router.message(BroadcastFlow.waiting_for_text)
+@admin_router.message(BroadcastFlow.waiting_for_text, F.text, ~F.text.startswith("/"))
 async def broadcast_preview(
     message: Message,
     state: FSMContext,
