@@ -5,6 +5,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 
+from app.bot.commands import setup_bot_commands
 from app.bot.handlers import include_routers
 from app.config import get_settings
 from app.db.session import create_session_factory
@@ -25,6 +26,7 @@ async def main() -> None:
     dispatcher = Dispatcher()
     dispatcher["container"] = container
     include_routers(dispatcher)
+    await setup_bot_commands(bot, settings.admin_ids)
 
     scheduler = create_scheduler(container)
     scheduler.start()
@@ -38,4 +40,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-
