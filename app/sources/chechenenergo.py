@@ -16,9 +16,12 @@ TIME_RE = re.compile(
     r"(?:до|-)\s*(?P<end>\d{1,2})[.:](?P<end_min>\d{2})",
     re.IGNORECASE,
 )
-DISTRICT_RE = re.compile(r"(?P<district>[А-Яа-яЁё\-\s]+?район)")
+DISTRICT_RE = re.compile(r"(?P<district>[А-Яа-яЁё\-\s]+?район)\b")
 LOCALITY_RE = re.compile(
     r"(?:част(?:ь|ично)\s+)?(?:г\.|с\.|пос\.)\s*(?P<locality>[А-Яа-яЁё\-\s]+?)(?=[:;,)]|$)"
+)
+SETTLEMENT_RE = re.compile(
+    r"(?:част(?:ь|ично)\s+)?(?:г\.|с\.|пос\.|п\.)\s*(?P<locality>[А-Яа-яЁё\-\s]+?)(?=[:;,)]|$)"
 )
 STREET_MARKER_RE = re.compile(r"(?:улицы|ул\.|пер-ки|пер\.|пр\.|б-р)", re.IGNORECASE)
 
@@ -145,6 +148,7 @@ def parse_segments(event_date: date, text: str) -> list[ParsedOutageSegment]:
         district = _extract_district(zone_text)
         locality = _extract_locality(zone_text)
         streets = _extract_streets(zone_text)
+        landmarks = _extract_landmarks(zone_text, locality)
         normalized_zone = normalize_text(zone_text)
         segments.append(
             ParsedOutageSegment(
@@ -156,7 +160,7 @@ def parse_segments(event_date: date, text: str) -> list[ParsedOutageSegment]:
                 district=comparable_name(district),
                 locality=comparable_name(locality),
                 streets=streets,
-                landmarks=[],
+                landmarks=landmarks,
                 segment_hash=stable_hash(
                     event_date.isoformat(),
                     starts_at.isoformat(timespec="minutes"),
@@ -191,15 +195,50 @@ def _extract_streets(text: str) -> list[str]:
     normalized = re.sub(r"^.*?:", "", text, count=1).replace(";", ",")
     candidates = []
     for piece in split_csv_like(normalized):
-        cleaned = re.sub(r"^(улицы|ул\.|пер-ки|пер\.|пр\.|б-р\.?)\s*", "", piece, flags=re.I)
-        cleaned = cleaned.strip(" ()")
+        if not STREET_MARKER_RE.search(piece):
+            continue
+        cleaned = re.sub(r"^.*?(улицы|ул\.|пер-ки|пер\.|пр\.|б-р\.?)\s*", "", piece, count=1, flags=re.I)
+        cleaned = re.sub(r"\s+и\s+.*$", "", cleaned, count=1, flags=re.I)
+        cleaned = cleaned.strip(" .;:-")
         if not cleaned:
             continue
         lowered = normalize_text(cleaned)
         if any(marker in lowered for marker in ["район", "часть г", "сзо"]):
             continue
-        candidates.append(comparable_name(cleaned) or cleaned)
+        parenthesized = re.findall(r"\(([^)]+)\)", cleaned)
+        base_name = re.sub(r"\s*\([^)]*\)", "", cleaned).strip(" .;:-")
+        for value in [base_name, *parenthesized]:
+            normalized_value = comparable_name(value)
+            if normalized_value and normalized_value != "частично":
+                candidates.append(normalized_value)
     return candidates
+
+
+def _extract_landmarks(text: str, primary_locality: str | None) -> list[str]:
+    primary = comparable_name(primary_locality)
+    landmarks = []
+    for match in SETTLEMENT_RE.finditer(text):
+        locality = comparable_name(_normalize_locality_form(match.group("locality").strip()))
+        if locality and locality != primary:
+            landmarks.append(locality)
+
+    for piece in split_csv_like(re.sub(r"^.*?:", "", text, count=1)):
+        if STREET_MARKER_RE.search(piece):
+            continue
+        cleaned = piece.strip(" .;:-")
+        if not cleaned:
+            continue
+        if "район" in normalize_text(cleaned):
+            continue
+        base_name = re.sub(r"\s*\([^)]*\)", "", cleaned).strip(" .;:-")
+        parenthesized = re.findall(r"\(([^)]+)\)", cleaned)
+        for value in [base_name, *parenthesized]:
+            value = re.sub(r"^част(?:ь|ично)\s+", "", value.strip(), count=1, flags=re.I)
+            normalized_value = comparable_name(value)
+            if normalized_value and normalized_value not in {primary, "частично"}:
+                landmarks.append(normalized_value)
+
+    return list(dict.fromkeys(landmarks))
 
 
 def _normalize_locality_form(value: str) -> str:

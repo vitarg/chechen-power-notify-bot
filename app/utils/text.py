@@ -33,7 +33,7 @@ def comparable_name(value: str | None) -> str | None:
     if not value:
         return None
     text = normalize_text(value)
-    text = re.sub(r"^(г|с|пос|ул|пер|пр|б-р|мкр)\.\s*", "", text)
+    text = re.sub(r"^(г|с|пос|п|ул|пер|пр|б-р|мкр)\.\s*", "", text)
     text = re.sub(r"\bрайон\b", "", text)
     text = SPACE_RE.sub(" ", text)
     return text.strip(" .;:-") or None
@@ -47,4 +47,3 @@ def stable_hash(*parts: str) -> str:
 def split_csv_like(value: str) -> list[str]:
     pieces = re.split(r"[,;]\s*", value)
     return [piece.strip(" .;:-") for piece in pieces if piece.strip(" .;:-")]
-

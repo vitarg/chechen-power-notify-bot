@@ -21,8 +21,14 @@ def test_parse_city_only() -> None:
     assert parsed.confidence.value == "medium"
 
 
+def test_parse_short_settlement_prefix() -> None:
+    parsed = parse_user_address("п. Заря")
+    assert parsed.locality == "заря"
+    assert parsed.street is None
+    assert parsed.confidence.value == "medium"
+
+
 def test_parse_district_is_not_locality() -> None:
     parsed = parse_user_address("Урус-Мартановский район")
     assert parsed.district == "урус-мартановский"
     assert parsed.locality is None
-
