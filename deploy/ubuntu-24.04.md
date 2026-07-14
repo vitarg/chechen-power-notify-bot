@@ -37,6 +37,23 @@ sudo systemctl enable --now chechen-power-notify
 sudo journalctl -u chechen-power-notify -f
 ```
 
+## Автодеплой через GitHub Actions
+
+Workflow `.github/workflows/deploy.yml` запускается после каждого push в `main`.
+Перед деплоем он выполняет Ruff и Pytest, затем подключается к серверу отдельным
+SSH-ключом и запускает `/usr/local/sbin/deploy-chechen-power-notify`.
+
+На сервере deploy-ключ должен быть ограничен forced command и не давать
+интерактивный shell. Workflow использует secrets `PROD_HOST`, `PROD_SSH_KEY` и
+`PROD_KNOWN_HOSTS` в GitHub environment `production`.
+
+Deploy-скрипт устанавливается от root:
+
+```bash
+sudo install -o root -g root -m 0755 deploy/deploy.sh \
+  /usr/local/sbin/deploy-chechen-power-notify
+```
+
 ## Бэкапы
 
 ```bash
@@ -49,4 +66,3 @@ Cron:
 ```text
 15 3 * * * /usr/local/bin/chechen-power-backup
 ```
-
